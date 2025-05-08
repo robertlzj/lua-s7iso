@@ -168,8 +168,7 @@ bool fromS7Address(std::string adrStr, S7Address& adrInfo)
     return false;
 }
 
-
-sol::variadic_results read(TS7Client& client, std::string address, sol::optional<S7FormatHint> formatHint, sol::this_state L)
+sol::variadic_results read(TS7Client& client, std::string address, sol::optional<S7FormatHint> formatHint, sol::optional<int> amount, sol::this_state L)
 {
     sol::variadic_results values;
 
@@ -182,6 +181,11 @@ sol::variadic_results read(TS7Client& client, std::string address, sol::optional
         values.push_back({ L, sol::in_place, "Invalid address string!" });
         return values;
     }
+
+    if (amount)
+        adrInfo.amount = amount.value();
+    else
+        amount = 1;
 
     // take default/given format hint
     S7FormatHint hint = S7FormatHint::Unsigned;
@@ -205,61 +209,70 @@ sol::variadic_results read(TS7Client& client, std::string address, sol::optional
     {
         std::string s((const char*)buf, adrInfo.amount);
         values.push_back({ L, sol::in_place, s });
-        values.push_back({ L, sol::in_place, "OK" });
     }
     else if (adrInfo.wordLen == S7WLBit)
     {
-        values.push_back({ L, sol::in_place_type<bool>, buf[0] > 0 });
-        values.push_back({ L, sol::in_place, "OK" });
+        for (int i = 0; i < amount; i++) {
+            values.push_back({ L, sol::in_place_type<bool>, buf[i] > 0 });
+        };
     }
     else if (adrInfo.wordLen == S7WLByte)
     {
-        if (hint == S7FormatHint::Signed)
-            values.push_back({ L, sol::in_place_type<int8_t>, buf[0] });
+        if (hint == S7FormatHint::Signed) {
+            for (int i = 0; i < amount; i++) {
+                values.push_back({ L, sol::in_place_type<int8_t>, buf[i] });
+            };
+        }
         else
-            values.push_back({ L, sol::in_place_type<uint8_t>, buf[0] });
-
-        values.push_back({ L, sol::in_place, "OK" });
+            for (int i = 0; i < amount; i++) {
+                values.push_back({ L, sol::in_place_type<uint8_t>, buf[i] });
+            };
     }
     else if (adrInfo.wordLen == S7WLWord)
     {
         if (hint == S7FormatHint::Signed)
         {
-            int16_t v = (*(int16_t*)&buf[0]);
-            SwapEndian(v);
-            values.push_back({ L, sol::in_place_type<int16_t>, v });
+            for (int i = 0; i < amount; i++) {
+                int16_t v = (*(int16_t*)&buf[i]);
+                SwapEndian(v);
+                values.push_back({ L, sol::in_place_type<int16_t>, v });
+            };
         }
         else
         {
-            uint16_t v = (*(uint16_t*)&buf[0]);
-            SwapEndian(v);
-            values.push_back({ L, sol::in_place_type<uint16_t>, v });
+            for (int i = 0; i < amount; i++) {
+                uint16_t v = (*(uint16_t*)&buf[i]);
+                SwapEndian(v);
+                values.push_back({ L, sol::in_place_type<uint16_t>, v });
+            };
         }
-
-        values.push_back({ L, sol::in_place, "OK" });
     }
     else if (adrInfo.wordLen == S7WLDWord)
     {
         if (hint == S7FormatHint::Float)
         {
-            float v = (*(float*)&buf[0]);
-            SwapEndian(v);
-            values.push_back({ L, sol::in_place_type<float>, v });
+            for (int i = 0; i < amount; i++) {
+                float v = (*(float*)&buf[i]);
+                SwapEndian(v);
+                values.push_back({ L, sol::in_place_type<float>, v });
+            };
         }
         else if (hint == S7FormatHint::Signed)
         {
-            int32_t v = (*(int32_t*)&buf[0]);
-            SwapEndian(v);
-            values.push_back({ L, sol::in_place_type<int32_t>, v });
+            for (int i = 0; i < amount; i++) {
+                int32_t v = (*(int32_t*)&buf[i]);
+                SwapEndian(v);
+                values.push_back({ L, sol::in_place_type<int32_t>, v });
+            };
         }
         else
         {
-            uint32_t v = (*(uint32_t*)&buf[0]);
-            SwapEndian(v);
-            values.push_back({ L, sol::in_place_type<uint32_t>, v });
+            for (int i = 0; i < amount; i++) {
+                uint32_t v = (*(uint32_t*)&buf[i]);
+                SwapEndian(v);
+                values.push_back({ L, sol::in_place_type<uint32_t>, v });
+            };
         }
-
-        values.push_back({ L, sol::in_place, "OK" });
     }
     else
     {
